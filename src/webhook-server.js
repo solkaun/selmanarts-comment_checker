@@ -2,6 +2,7 @@ import express from 'express';
 import { config } from './config.js';
 import { InstagramAPI } from './instagram-api.js';
 import { CommentModerator } from './comment-moderator.js';
+import { Logger } from './logger.js';
 
 export class WebhookServer {
   constructor() {
@@ -112,6 +113,15 @@ export class WebhookServer {
         
         if (deleted) {
           console.log(`✅ Yorum silindi: ${commentId}`);
+          
+          // Log dosyasına kaydet
+          Logger.logDeletedComment({
+            commentId: commentId,
+            username: commentData.from?.username || commentData.from?.id,
+            mediaId: media?.id,
+            text: text,
+            reasons: analysis.reasons
+          });
         } else {
           console.log(`❌ Yorum silinemedi: ${commentId}`);
         }
@@ -152,6 +162,15 @@ export class WebhookServer {
         if (deleted) {
           console.log(`✅ Silindi`);
           deletedCount++;
+          
+          // Log dosyasına kaydet
+          Logger.logDeletedComment({
+            commentId: comment.id,
+            username: comment.username,
+            mediaId: mediaId,
+            text: comment.text,
+            reasons: analysis.reasons
+          });
         } else {
           console.log(`❌ Silinemedi`);
         }
@@ -178,7 +197,8 @@ export class WebhookServer {
       console.log(`   - Access Token: ${config.instagram.accessToken ? '✅ Tanımlı' : '❌ Eksik'}`);
       console.log(`   - Business Account ID: ${config.instagram.businessAccountId || '❌ Eksik'}`);
       console.log(`   - Media IDs: ${config.mediaIds.join(', ') || '❌ Tanımsız'}`);
-      console.log(`\n💡 Manuel kontrol için: POST http://localhost:${config.webhook.port}/check-media/:mediaId\n`);
+      console.log(`\n📝 Log dosyası: ${Logger.getLogPath()}`);
+      console.log(`💡 Manuel kontrol için: POST http://localhost:${config.webhook.port}/check-media/:mediaId\n`);
     });
   }
 }

@@ -17,7 +17,6 @@ export class InstagramAPI {
           fields: 'id,text,timestamp,username,from'
         }
       });
-      console.log(response.data);
       return response.data.data || [];
     } catch (error) {
       console.error(`Yorumlar alınırken hata (${mediaId}):`, error.response?.data || error.message);

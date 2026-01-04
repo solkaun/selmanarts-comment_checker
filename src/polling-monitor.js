@@ -1,6 +1,7 @@
 import { InstagramAPI } from './instagram-api.js';
 import { CommentModerator } from './comment-moderator.js';
 import { config } from './config.js';
+import { Logger } from './logger.js';
 
 // Webhook alternatifi: Periyodik kontrol sistemi
 export class PollingMonitor {
@@ -13,6 +14,8 @@ export class PollingMonitor {
   }
 
   async checkMedia(mediaId) {
+    let deletedCount = 0;
+    
     try {
       const comments = await this.instagramAPI.getComments(mediaId);
       
@@ -26,7 +29,6 @@ export class PollingMonitor {
 
         // Yorum metni kontrolü
         if (!comment.text || typeof comment.text !== 'string') {
-          console.log(`⚠️  Boş/geçersiz yorum atlandı: ${comment.id}`);
           continue;
         }
 
@@ -44,6 +46,16 @@ export class PollingMonitor {
           
           if (deleted) {
             console.log(`✅ Yorum silindi`);
+            deletedCount++;
+            
+            // Log dosyasına kaydet
+            Logger.logDeletedComment({
+              commentId: comment.id,
+              username: comment.username,
+              mediaId: mediaId,
+              text: comment.text,
+              reasons: analysis.reasons
+            });
           } else {
             console.log(`❌ Yorum silinemedi`);
           }
@@ -54,13 +66,40 @@ export class PollingMonitor {
     } catch (error) {
       console.error(`Medya kontrol hatası (${mediaId}):`, error.message);
     }
+    
+    return deletedCount;
   }
 
   async checkAllMedia() {
-    console.log(`\n🔄 Yorumlar kontrol ediliyor... [${new Date().toLocaleString('tr-TR')}]`);
+    const startTime = Date.now();
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🔄 Yorumlar kontrol ediliyor... [${new Date().toLocaleString('tr-TR')}]`);
+    console.log(`📋 Kontrol edilecek medya sayısı: ${config.mediaIds.length}`);
+    console.log(`${'='.repeat(80)}`);
+    
+    let totalDeleted = 0;
     
     for (const mediaId of config.mediaIds) {
-      await this.checkMedia(mediaId);
+      const deleted = await this.checkMedia(mediaId);
+      totalDeleted += deleted;
+    }
+    
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`✅ KONTROL TAMAMLANDI`);
+    console.log(`📊 ${config.mediaIds.length} medya kontrol edildi`);
+    console.log(`🗑️  ${totalDeleted} yorum silindi`);
+    console.log(`⏱️  Süre: ${duration} saniye`);
+    console.log(`🕐 Sonraki kontrol: ${new Date(Date.now() + this.intervalMs).toLocaleTimeString('tr-TR')}`);
+    console.log(`${'='.repeat(80)}\n`);
+    
+    // Log dosyasına kaydet
+    if (totalDeleted > 0) {
+      Logger.logCheckCompleted({
+        totalChecked: config.mediaIds.length,
+        totalDeleted: totalDeleted
+      });
     }
   }
 
@@ -79,6 +118,7 @@ export class PollingMonitor {
     console.log(`\n🚀 Polling Monitor başlatıldı!`);
     console.log(`⏱️  Kontrol aralığı: ${this.intervalMs / 60000} dakika`);
     console.log(`📋 Takip edilen medyalar: ${config.mediaIds.join(', ')}`);
+    console.log(`📝 Log dosyası: ${Logger.getLogPath()}`);
     
     // İlk kontrolü hemen yap
     this.checkAllMedia();
