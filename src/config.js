@@ -9,7 +9,7 @@ export const config = {
   },
   webhook: {
     verifyToken: process.env.WEBHOOK_VERIFY_TOKEN || 'mysecrettoken',
-    port: process.env.PORT || 3000
+    port: process.env.PORT || 3002
   },
   mediaIds: process.env.MEDIA_IDS ? process.env.MEDIA_IDS.split(',').map(id => id.trim()) : []
 };
