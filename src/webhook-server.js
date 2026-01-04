@@ -28,6 +28,9 @@ export class WebhookServer {
           console.log('❌ Webhook doğrulama başarısız!');
           res.sendStatus(403);
         }
+      } else {
+        console.log('❌ Webhook doğrulama başarısız!');
+        res.sendStatus(403);
       }
     });
 
